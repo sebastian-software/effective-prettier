@@ -5,6 +5,51 @@ import { extname } from "node:path"
 import figures from "figures"
 import chalk from "chalk"
 
+type CallableFunction<T> = () => Promise<T>
+
+interface TimedResult<T> {
+  result: T
+  runtime: number
+}
+
+async function measureExecutionTime<T>(
+  fn: CallableFunction<T>
+): Promise<TimedResult<T>> {
+  const startTime = performance.now()
+  const result = await fn()
+  const endTime = performance.now()
+
+  const runtime = endTime - startTime
+
+  return {
+    result,
+    runtime
+  }
+}
+
+async function formatWithESLint(text: string, filePath: string) {
+  let isModified = false
+
+  const returnValue = await measureExecutionTime(async () => {
+    const result = await getESLintInstance().lintText(text, {
+      filePath
+    })
+
+    return result[0]
+  })
+
+  const lintOutput = returnValue.result.output
+  if (lintOutput && lintOutput !== text) {
+    text = lintOutput
+    isModified = true
+  }
+
+  return {
+    text,
+    isModified
+  }
+}
+
 export async function runInParallel<T>(
   tasks: Array<() => Promise<T>>,
   maxParallel: number
