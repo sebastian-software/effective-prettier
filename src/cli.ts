@@ -1,8 +1,10 @@
-import { ESLint }  from "eslint"
-import { format } from "prettier"
-import glob from "fast-glob"
-import { readFile } from 'node:fs/promises';
+import { ESLint } from "eslint";
+import { format } from "prettier";
+import glob from "fast-glob";
+import { readFile, writeFile } from "node:fs/promises";
 import { extname } from "node:path";
+import figures from "figures";
+import chalk from "chalk";
 
 const prettierParser: Record<string, string> = {
   ".json": "json",
@@ -14,7 +16,7 @@ const prettierParser: Record<string, string> = {
   ".html": "html",
   ".yaml": "yaml",
   ".yml": "yaml",
-}
+};
 
 const eslintSupported: Record<string, boolean> = {
   ".json": true,
@@ -26,62 +28,90 @@ const eslintSupported: Record<string, boolean> = {
   ".cjs": true,
   ".cts": true,
   ".mts": true,
-}
+};
 
-// 1. Create an instance.
-const eslint = new ESLint();
+// Keep ESLint alive as a lazy singleton
+const getESLintInstance = (() => {
+  let instance: ESLint | undefined;
+
+  return () => {
+    if (!instance) {
+      instance = new ESLint();
+    }
+
+    return instance;
+  };
+})();
+
+const symbols: Record<string, string> = {
+  skipped: chalk.dim(figures.bullet),
+  modified: chalk.green(figures.tick),
+  error: chalk.red(figures.cross),
+};
 
 async function processFile(filePath: string) {
-  const fileExt = extname(filePath)
-  const parser = prettierParser[fileExt] ?? "babel"
+  const startTime = performance.now();
 
-  let content = await readFile(filePath, "utf-8")
+  const fileExt = extname(filePath);
+  const parser = prettierParser[fileExt] ?? "babel";
 
-  if (eslintSupported[fileExt]) {
-    const lintResultPre = await eslint.lintText(content, {filePath})
-    content = lintResultPre[0].output ?? content
-  }
-
-  content = await format(content, {parser})
+  const content = await readFile(filePath, "utf-8");
+  let modified = content;
 
   if (eslintSupported[fileExt]) {
-    const lintResultPost = await eslint.lintText(content, {filePath})
-    content = lintResultPost[0].output ?? content
+    const lintResultPre = await getESLintInstance().lintText(modified, {
+      filePath,
+    });
+    modified = lintResultPre[0].output ?? modified;
   }
 
-  console.log("FORMATTED:", filePath, content)
+  modified = await format(modified, { parser });
 
+  if (eslintSupported[fileExt]) {
+    const lintResultPost = await getESLintInstance().lintText(modified, {
+      filePath,
+    });
+    modified = lintResultPost[0].output ?? modified;
+  }
+
+  const hasChanges = modified !== content;
+  if (hasChanges) {
+    // Only write modified files
+    await writeFile(filePath, modified, "utf-8");
+  }
+
+  const stopTime = performance.now();
+  const duration = `${Math.round(stopTime - startTime)}ms`;
+
+  console.log(
+    `${
+      hasChanges ? symbols.modified : symbols.skipped
+    } ${filePath} (${duration})`,
+  );
 }
 
 async function main(patterns: string[] = []) {
-  const files = await glob(patterns)
-  console.log("FILES:", files)
+  const files = await glob(patterns);
+  console.log("FILES:", files);
 
-  const results = await Promise.all(files.map(processFile))
+  await Promise.all(files.map(processFile));
 
-  console.log("DONE")
-  console.log("Results:", results)
+  console.log("DONE");
+}
 
-  // // 2. Lint files.
-  // const results = await eslint.lintFiles(["src/**/*.(ts,tsx,js)"]);
+const args = process.argv.slice(2);
 
-  // // 3. Format the results.
-  // const formatter = await eslint.loadFormatter("stylish");
-  // const resultText = formatter.format(results);
-
-  // // 4. Output it.
-  // console.log(resultText);
+if (args.length !== 1) {
+  console.error("Usage: effective-prettier <pattern>");
+  process.exit(1);
 }
 
 try {
-  main([
-    "src/**/*.{ts,tsx,js,jsx,mjs,cjc,mts,cts}"
-  ]);
-} catch(error) {
+  main(args);
+} catch (error) {
   if (error instanceof Error) {
     console.error(error.message);
   }
 
   process.exitCode = 1;
 }
-

@@ -44,6 +44,8 @@
     "prettier": "3.x"
   },
   "dependencies": {
-    "fast-glob": "^3.3.1"
+    "chalk": "^5.3.0",
+    "fast-glob": "^3.3.1",
+    "figures": "^5.0.0"
   }
 }
