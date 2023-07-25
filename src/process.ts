@@ -8,11 +8,18 @@ import chalk from "chalk"
 const prettierParser: Record<string, string> = {
   ".json": "json",
   ".css": "css",
-  ".tsc": "typescript",
+  ".tsx": "typescript",
   ".ts": "typescript",
+  ".cts": "typescript",
+  ".mts": "typescript",
+  ".jsx": "babel",
+  ".js": "babel",
+  ".cjs": "babel",
+  ".mjs": "babel",
   ".md": "markdown",
   ".mdx": "mdx",
   ".html": "html",
+  ".htm": "html",
   ".yaml": "yaml",
   ".yml": "yaml"
 }
@@ -54,7 +61,13 @@ export async function processFile(filePath: string) {
   const startTime = performance.now()
 
   const fileExt = extname(filePath)
-  const parser = prettierParser[fileExt] ?? "babel"
+  const parser = prettierParser[fileExt]
+
+  if (!parser)  {
+    console.log(`${symbols.skipped} ${filePath} (unsupported)`)
+    return
+  }
+
   const prettierOptions = await resolveConfig(filePath)
 
   const content = await readFile(filePath, "utf-8")
