@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Lean CLI which combines prettier and eslint",
   "bin": {
-    "effective-favicon": "dist/cli.js"
+    "effective-prettier": "dist/cli.js"
   },
   "module": "dist/process.js",
   "files": [
