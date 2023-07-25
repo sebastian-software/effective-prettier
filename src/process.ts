@@ -1,9 +1,10 @@
-import { ESLint, Linter } from "eslint"
+import { ESLint, Linter, Rule } from "eslint"
 import { format, resolveConfig } from "prettier"
 import { readFile, writeFile } from "node:fs/promises"
 import { extname, join } from "node:path"
 import figures from "figures"
 import chalk from "chalk"
+import { Legacy } from "@eslint/eslintrc"
 
 type CallableFunction<T> = () => Promise<T>
 
@@ -27,28 +28,47 @@ async function measureExecutionTime<T>(
   }
 }
 
-function prepareESLint() {
-  const linter = new Linter();
-  const rules = linter.getRules();
-
-  const relevantRules: Record<string, "off"> = {};
-
-  rules.forEach((rule, name) => {
-
-    // console.log(rule)
-    const fixable = rule.meta?.fixable;
-
-
-    if (!fixable) {
-      console.log('turning off rule:', name);
-      relevantRules[name] = "off";
-    }
-  })
-
+type PluginModule = {
+  default: ESLint.Plugin
 }
 
-prepareESLint()
-process.exit(0)
+function getFullyQualifiedPluginName(pluginName: string) {
+  // Rely on the quite internal naming helper in ESLint.
+  // This is not rock solid for the distance future but feels better
+  // than trying to replicate the same logic here.
+  return Legacy.naming.normalizePackageName(pluginName, "eslint-plugin")
+}
+
+async function loadPlugin(pluginName: string): Promise<ESLint.Plugin> {
+  const longName = getFullyQualifiedPluginName(pluginName)
+  const module = (await import(longName)) as PluginModule
+  return module.default
+}
+
+// ESLint TypeScript uses a non-standard flag requiresTypeChecking on their docs section
+type ExtendedDocs = Rule.RuleMetaData["docs"] & {
+  requiresTypeChecking?: boolean
+}
+
+async function getFixableRulesOfPlugin(pluginName: string) {
+  const plugin = await loadPlugin(pluginName)
+
+  const rules = plugin.rules as Record<string, Rule.RuleModule>
+  const fixable = new Set()
+
+  for (const [name, rule] of Object.entries(rules)) {
+    const meta = rule.meta
+    const docs = meta?.docs as ExtendedDocs
+    const requiresTypes = docs?.requiresTypeChecking as boolean
+    const isFixable = meta?.fixable
+
+    if (isFixable && !requiresTypes) {
+      fixable.add(`${pluginName}/${name}`)
+    }
+  }
+
+  return fixable
+}
 
 async function createESLint() {
   const inst = new ESLint({
@@ -57,7 +77,25 @@ async function createESLint() {
 
   // Preload the ESLint config from the current folder
   // assuming that we focus on scanning files inside CWD.
-  await inst.calculateConfigForFile(join(process.cwd(), "index.ts"))
+  const config = await inst.calculateConfigForFile(
+    join(process.cwd(), "index.ts")
+  )
+
+  const fixable = []
+  for (const pluginName of config.plugins) {
+    fixable.push(...(await getFixableRulesOfPlugin(pluginName)))
+  }
+
+  console.log("ALL FIXABLE:", fixable)
+
+  // const filePath = join(process.cwd(), "src/index.ts")
+
+  // const result = await inst.lintText("const x", { filePath })
+  // const meta = inst.getRulesMetaForResults(result)
+  // => meta is always = {} - DAMN!
+
+  // console.log("FILE-PATH:", filePath)
+  // console.log("META:", meta)
 
   return inst
 }
