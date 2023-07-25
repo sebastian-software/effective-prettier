@@ -18,17 +18,17 @@ const prettierParser: Record<string, string> = {
   ".yml": "yaml"
 }
 
-const eslintSupported: Record<string, boolean> = {
-  ".json": true,
-  ".ts": true,
-  ".tsx": true,
-  ".js": true,
-  ".jsx": true,
-  ".mjs": true,
-  ".cjs": true,
-  ".cts": true,
-  ".mts": true
-}
+const eslintSupported = new Set([
+  ".json",
+  ".ts",
+  ".tsx",
+  ".js",
+  ".jsx",
+  ".mjs",
+  ".mts",
+  ".cjs",
+  ".cts"
+])
 
 // Keep ESLint alive as a lazy singleton
 const getESLintInstance = (() => {
@@ -36,7 +36,9 @@ const getESLintInstance = (() => {
 
   return () => {
     if (!instance) {
-      instance = new ESLint()
+      instance = new ESLint({
+        fix: true
+      })
     }
 
     return instance
@@ -59,20 +61,38 @@ async function processFile(filePath: string) {
   const content = await readFile(filePath, "utf-8")
   let modified = content
 
-  if (eslintSupported[fileExt]) {
+  let hasPrettierChanges = false
+  let hasESLintChanges = false
+
+  if (eslintSupported.has(fileExt)) {
     const lintResultPre = await getESLintInstance().lintText(modified, {
       filePath
     })
-    modified = lintResultPre[0].output ?? modified
+    const lintOutput = lintResultPre[0].output
+    if (lintOutput && lintOutput !== modified) {
+      modified = lintOutput
+      hasESLintChanges = true
+    }
   }
 
-  modified = await format(modified, { ...prettierOptions, parser })
+  const prettierModified = await format(modified, {
+    ...prettierOptions,
+    parser
+  })
+  if (prettierModified !== modified) {
+    modified = prettierModified
+    hasPrettierChanges = true
+  }
 
-  if (eslintSupported[fileExt]) {
+  if (eslintSupported.has(fileExt)) {
     const lintResultPost = await getESLintInstance().lintText(modified, {
       filePath
     })
-    modified = lintResultPost[0].output ?? modified
+    const lintOutput = lintResultPost[0].output
+    if (lintOutput && lintOutput !== modified) {
+      modified = lintOutput
+      hasESLintChanges = true
+    }
   }
 
   const hasChanges = modified !== content
@@ -85,19 +105,18 @@ async function processFile(filePath: string) {
   const duration = `${Math.round(stopTime - startTime)}ms`
 
   console.log(
-    `${
-      hasChanges ? symbols.modified : symbols.skipped
+    `${hasPrettierChanges ? symbols.modified : symbols.skipped} ${
+      hasESLintChanges ? symbols.modified : symbols.skipped
     } ${filePath} (${duration})`
   )
 }
 
 async function main(patterns: string[] = []) {
   const files = await glob(patterns)
-  console.log("FILES:", files)
 
+  console.log(`Processing ${files.length} files...`)
   await Promise.all(files.map(processFile))
-
-  console.log("DONE")
+  console.log("Done")
 }
 
 const args = process.argv.slice(2)
