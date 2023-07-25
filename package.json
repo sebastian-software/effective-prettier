@@ -48,6 +48,7 @@
     "prettier": "3.x"
   },
   "dependencies": {
+    "@eslint/eslintrc": "^2.1.0",
     "chalk": "^5.3.0",
     "fast-glob": "^3.3.1",
     "figures": "^5.0.0"
