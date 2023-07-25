@@ -1,6 +1,6 @@
 {
   "name": "@effective/prettier",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Lean CLI which combines prettier and eslint",
   "bin": {
     "effective-favicon": "dist/cli.js"
