@@ -5,6 +5,31 @@ import { extname } from "node:path"
 import figures from "figures"
 import chalk from "chalk"
 
+export async function runInParallel<T>(
+  tasks: Array<() => Promise<T>>,
+  maxParallel: number
+): Promise<T[]> {
+  const results: Promise<T>[] = []
+  const executing: Promise<T>[] = []
+
+  for (const task of tasks) {
+    const p = Promise.resolve().then(() => task())
+    results.push(p)
+
+    if (maxParallel <= tasks.length) {
+      const e: Promise<T> = p.finally(() => {
+        executing.splice(executing.indexOf(e), 1)
+      })
+      executing.push(e)
+      if (executing.length >= maxParallel) {
+        await Promise.race(executing)
+      }
+    }
+  }
+
+  return Promise.all(results)
+}
+
 const prettierParser: Record<string, string> = {
   ".json": "json",
   ".css": "css",
@@ -63,7 +88,7 @@ export async function processFile(filePath: string) {
   const fileExt = extname(filePath)
   const parser = prettierParser[fileExt]
 
-  if (!parser)  {
+  if (!parser) {
     console.log(`${symbols.skipped} ${filePath} (unsupported)`)
     return
   }

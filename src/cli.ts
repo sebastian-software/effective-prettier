@@ -1,11 +1,15 @@
 import glob from "fast-glob"
-import { processFile } from "./process.js"
+import { processFile, runInParallel } from "./process.js"
 
 async function main(patterns: string[] = []) {
   const files = await glob(patterns)
 
   console.log(`Processing ${files.length} files...`)
-  await Promise.all(files.map(processFile))
+  // await Promise.all(files.map(processFile))
+
+  const tasks = files.map((fileName) => () => processFile(fileName))
+
+  await runInParallel<void>(tasks, 3)
   console.log("Done")
 }
 
