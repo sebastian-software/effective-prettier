@@ -20,7 +20,7 @@ if (args.length !== 1) {
 }
 
 try {
-  main(args)
+  void main(args)
 } catch (error) {
   if (error instanceof Error) {
     console.error(error.message)

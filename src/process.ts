@@ -1,4 +1,4 @@
-import { ESLint } from "eslint"
+import { ESLint, Linter } from "eslint"
 import { format, resolveConfig } from "prettier"
 import { readFile, writeFile } from "node:fs/promises"
 import { extname, join } from "node:path"
@@ -26,6 +26,29 @@ async function measureExecutionTime<T>(
     runtime
   }
 }
+
+function prepareESLint() {
+  const linter = new Linter();
+  const rules = linter.getRules();
+
+  const relevantRules: Record<string, "off"> = {};
+
+  rules.forEach((rule, name) => {
+
+    // console.log(rule)
+    const fixable = rule.meta?.fixable;
+
+
+    if (!fixable) {
+      console.log('turning off rule:', name);
+      relevantRules[name] = "off";
+    }
+  })
+
+}
+
+prepareESLint()
+process.exit(0)
 
 async function createESLint() {
   const inst = new ESLint({
