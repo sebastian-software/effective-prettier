@@ -1,4 +1,4 @@
-import { glob } from "fast-glob"
+import glob from "fast-glob"
 import { processFile } from "./process.js"
 
 async function main(patterns: string[] = []) {
