@@ -1,7 +1,7 @@
 import { ESLint } from "eslint"
 import { format, resolveConfig } from "prettier"
 import { readFile, writeFile } from "node:fs/promises"
-import { extname } from "node:path"
+import { extname, join } from "node:path"
 import figures from "figures"
 import chalk from "chalk"
 
@@ -27,26 +27,60 @@ async function measureExecutionTime<T>(
   }
 }
 
-async function formatWithESLint(text: string, filePath: string) {
-  let isModified = false
-
-  const returnValue = await measureExecutionTime(async () => {
-    const result = await getESLintInstance().lintText(text, {
-      filePath
-    })
-
-    return result[0]
+function createESLint() {
+  const inst = new ESLint({
+    fix: true
   })
 
-  const lintOutput = returnValue.result.output
-  if (lintOutput && lintOutput !== text) {
-    text = lintOutput
-    isModified = true
-  }
+  // Preload the ESLint config from the current folder
+  // assuming that we focus on scanning files inside CWD.
+  inst.calculateConfigForFile(join(process.cwd(), "index.js"))
+
+  return inst
+}
+
+const sharedESLint = createESLint()
+
+async function formatWithESLintImpl(text: string, filePath: string) {
+  const result = await sharedESLint.lintText(text, {
+    filePath
+  })
+
+  return result[0]
+}
+
+async function formatWithESLint(text: string, filePath: string) {
+  const returnValue = await measureExecutionTime(async () =>
+    formatWithESLintImpl(text, filePath)
+  )
+  const output = returnValue.result.output ?? text
+  const isModified = output !== text
 
   return {
-    text,
+    output,
+    runtime: returnValue.runtime,
     isModified
+  }
+}
+
+async function formatWithPrettier(text: string, filePath: string) {
+  const fileExt = extname(filePath)
+  const parser = prettierParser[fileExt]
+
+  const prettierOptions = await resolveConfig(filePath)
+
+  const returnValue = await measureExecutionTime(
+    async () =>
+      await format(text, {
+        ...prettierOptions,
+        parser
+      })
+  )
+
+  return {
+    output: returnValue.result,
+    runtime: returnValue.runtime,
+    isModified: returnValue.result !== text
   }
 }
 
@@ -106,21 +140,6 @@ const eslintSupported = new Set([
   ".cts"
 ])
 
-// Keep ESLint alive as a lazy singleton
-const getESLintInstance = (() => {
-  let instance: ESLint | undefined
-
-  return () => {
-    if (!instance) {
-      instance = new ESLint({
-        fix: true
-      })
-    }
-
-    return instance
-  }
-})()
-
 const symbols: Record<string, string> = {
   skipped: chalk.dim(figures.bullet),
   modified: chalk.green(figures.tick),
@@ -128,8 +147,6 @@ const symbols: Record<string, string> = {
 }
 
 export async function processFile(filePath: string) {
-  const startTime = performance.now()
-
   const fileExt = extname(filePath)
   const parser = prettierParser[fileExt]
 
@@ -138,57 +155,48 @@ export async function processFile(filePath: string) {
     return
   }
 
-  const prettierOptions = await resolveConfig(filePath)
-
   const content = await readFile(filePath, "utf-8")
   let modified = content
 
-  let hasPrettierChanges = false
-  let hasESLintChanges = false
+  const durations = []
+  const feedback = []
 
   if (eslintSupported.has(fileExt)) {
-    const lintResultPre = await getESLintInstance().lintText(modified, {
-      filePath
-    })
-    const lintOutput = lintResultPre[0].output
-    if (lintOutput && lintOutput !== modified) {
-      modified = lintOutput
-      hasESLintChanges = true
+    const result = await formatWithESLint(modified, filePath)
+    durations.push(result.runtime)
+    feedback.push(result.isModified ? symbols.modified : symbols.skipped)
+    if (result.isModified) {
+      modified = result.output
     }
   }
 
-  const prettierModified = await format(modified, {
-    ...prettierOptions,
-    parser
-  })
-  if (prettierModified !== modified) {
-    modified = prettierModified
-    hasPrettierChanges = true
+  const result = await formatWithPrettier(modified, filePath)
+  durations.push(result.runtime)
+  feedback.push(result.isModified ? symbols.modified : symbols.skipped)
+  if (result.isModified) {
+    modified = result.output
   }
 
-  if (eslintSupported.has(fileExt)) {
-    const lintResultPost = await getESLintInstance().lintText(modified, {
-      filePath
-    })
-    const lintOutput = lintResultPost[0].output
-    if (lintOutput && lintOutput !== modified) {
-      modified = lintOutput
-      hasESLintChanges = true
+  // Post ESLint is thought for post-processing previously made changes by Prettier
+  if (eslintSupported.has(fileExt) && result.isModified) {
+    const result = await formatWithESLint(modified, filePath)
+    durations.push(result.runtime)
+    feedback.push(result.isModified ? symbols.modified : symbols.skipped)
+    if (result.isModified) {
+      modified = result.output
     }
   }
 
   const hasChanges = modified !== content
   if (hasChanges) {
-    // Only write modified files
     await writeFile(filePath, modified, "utf-8")
   }
 
-  const stopTime = performance.now()
-  const duration = `${Math.round(stopTime - startTime)}ms`
+  const formattedFeedback = feedback.join(" ")
 
-  console.log(
-    `${hasPrettierChanges ? symbols.modified : symbols.skipped} ${
-      hasESLintChanges ? symbols.modified : symbols.skipped
-    } ${filePath} (${duration})`
-  )
+  const formattedDurations = durations
+    .map((duration) => `${Math.round(duration)}ms`)
+    .join(", ")
+
+  console.log(`${formattedFeedback} ${filePath} (${formattedDurations})`)
 }
