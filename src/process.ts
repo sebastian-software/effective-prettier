@@ -27,19 +27,19 @@ async function measureExecutionTime<T>(
   }
 }
 
-function createESLint() {
+async function createESLint() {
   const inst = new ESLint({
     fix: true
   })
 
   // Preload the ESLint config from the current folder
   // assuming that we focus on scanning files inside CWD.
-  inst.calculateConfigForFile(join(process.cwd(), "index.js"))
+  await inst.calculateConfigForFile(join(process.cwd(), "index.ts"))
 
   return inst
 }
 
-const sharedESLint = createESLint()
+const sharedESLint = await createESLint()
 
 async function formatWithESLintImpl(text: string, filePath: string) {
   const result = await sharedESLint.lintText(text, {
