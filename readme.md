@@ -6,6 +6,11 @@ A modern combined tool for using both Prettier and ESLint but only using one too
 
 `effective-prettier <pattern>`
 
+Effective Prettier uses you locally installed tools. It does not include any versions of `prettier` or `eslint` on its own. In our experience this most often leads to more issues than it actually helps. We define these two tools as peer dependencies therefor:
+
+- "eslint": "8.x",
+- "prettier": "3.x"
+
 ## Tech Stack
 
 - `eslint` for linting JavaScript and TypeScript files
