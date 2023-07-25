@@ -50,10 +50,9 @@ type ExtendedDocs = Rule.RuleMetaData["docs"] & {
   requiresTypeChecking?: boolean
 }
 
-async function getFixableRulesOfPlugin(pluginName: string) {
-  const plugin = await loadPlugin(pluginName)
+type RuleSet = Record<string, Rule.RuleModule>
 
-  const rules = plugin.rules as Record<string, Rule.RuleModule>
+function getFixableRules(rules: RuleSet, prefix = "") {
   const fixable = new Set()
 
   for (const [name, rule] of Object.entries(rules)) {
@@ -63,11 +62,25 @@ async function getFixableRulesOfPlugin(pluginName: string) {
     const isFixable = meta?.fixable
 
     if (isFixable && !requiresTypes) {
-      fixable.add(`${pluginName}/${name}`)
+      fixable.add(`${prefix}${name}`)
     }
   }
 
   return fixable
+}
+
+function convertMapToRecord<T>(map: Map<string, T>): Record<string, T> {
+  const record: Record<string, T> = {}
+  for (const [key, value] of map.entries()) {
+    record[key] = value
+  }
+  return record
+}
+
+async function getFixableRulesOfPlugin(pluginName: string) {
+  const plugin = await loadPlugin(pluginName)
+  const rules = plugin.rules as RuleSet
+  return getFixableRules(rules, `${pluginName}/`)
 }
 
 async function createESLint() {
@@ -77,16 +90,21 @@ async function createESLint() {
 
   // Preload the ESLint config from the current folder
   // assuming that we focus on scanning files inside CWD.
-  const config = await inst.calculateConfigForFile(
+  const config = (await inst.calculateConfigForFile(
     join(process.cwd(), "index.ts")
-  )
+  )) as Linter.Config
 
-  const fixable = []
-  for (const pluginName of config.plugins) {
-    fixable.push(...(await getFixableRulesOfPlugin(pluginName)))
+  const linter = new Linter()
+  const fixableBuiltIns = getFixableRules(convertMapToRecord(linter.getRules()))
+
+  const fixable = [...fixableBuiltIns]
+  if (config.plugins) {
+    for (const pluginName of config.plugins) {
+      fixable.push(...(await getFixableRulesOfPlugin(pluginName)))
+    }
   }
 
-  console.log("ALL FIXABLE:", fixable)
+  console.log("ALL FIXABLE:", JSON.stringify(fixable))
 
   // const filePath = join(process.cwd(), "src/index.ts")
 
