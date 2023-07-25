@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "include": ["src/**/*"],
+  "compilerOptions": {
+    "outDir": "dist",
+
+    // Recommended:
+    // https://github.com/tsconfig/bases/blob/main/bases/recommended.json
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+
+    // Create React App:
+    // https://github.com/tsconfig/bases/blob/main/bases/create-react-app.json
+    "module": "Node16",
+    "allowJs": true,
+    // To provide backwards compatibility, Node.js allows you to import most CommonJS packages with a default import.
+    // This flag tells TypeScript that it's okay to use import on CommonJS modules.
+    "allowSyntheticDefaultImports": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+
+    "moduleResolution": "Node16",
+    "noFallthroughCasesInSwitch": true,
+
+    // Sindre Sorhus
+    // https://github.com/sindresorhus/tsconfig
+    "target": "ES2020", // Node.js 14
+    "lib": ["dom", "dom.iterable", "ES2020"],
+    "resolveJsonModule": false, // ESM doesn't yet support JSON modules.
+    "declaration": true,
+    "pretty": true,
+    "newLine": "lf",
+    "stripInternal": true,
+    "noUnusedLocals": true,
+    "noEmitOnError": true,
+    "useDefineForClassFields": true
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "name": "@effective/prettier",
+  "version": "0.0.1",
+  "description": "Combines prettier with eslint in one CLI",
+  "bin": {
+    "effective-favicon": "dist/cli.js"
+  },
+  "module": "dist/process.js",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "check": "tsc --noEmit",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": {
+    "name": "Sebastian Werner",
+    "email": "s.werner@sebastian-software.de",
+    "url": "http://sebastian-software.de/werner"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sebastian-software/effective-prettier.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "Apache-2.0",
+  "type": "module",
+  "devDependencies": {
+    "@types/eslint": "^8.44.1",
+    "@types/node": "^20.4.4",
+    "eslint": "^8.45.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.1.6"
+  },
+  "peerDependencies": {
+    "eslint": "8.x",
+    "prettier": "3.x"
+  },
+  "dependencies": {
+    "fast-glob": "^3.3.1"
+  }
+}
