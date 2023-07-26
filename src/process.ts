@@ -5,7 +5,7 @@ import figures from "figures"
 import chalk from "chalk"
 import { measureExecutionTime } from "./measureExecutionTime.js"
 import { createESLint } from "./createESLint.js"
-import { ESLint } from "eslint"
+import type { ESLint } from "eslint"
 import { prettierParser, eslintSupported } from "./config.js"
 
 let sharedESLint: ESLint | undefined

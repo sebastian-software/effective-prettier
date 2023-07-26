@@ -1,10 +1,12 @@
-import { ESLint, Linter, Rule } from "eslint"
+import type { ESLint, Linter, Rule } from "eslint"
 import { join } from "node:path"
 import { Legacy } from "@eslint/eslintrc"
+import importFrom from "import-from"
 
 type PluginModule = {
   default: ESLint.Plugin
 }
+
 function getFullyQualifiedPluginName(pluginName: string) {
   // Rely on the quite internal naming helper in ESLint.
   // This is not rock solid for the distance future but feels better
@@ -17,11 +19,14 @@ async function loadPlugin(pluginName: string): Promise<ESLint.Plugin> {
   const module = (await import(longName)) as PluginModule
   return module.default
 }
+
 // ESLint TypeScript uses a non-standard flag requiresTypeChecking on their docs section
 type ExtendedDocs = Rule.RuleMetaData["docs"] & {
   requiresTypeChecking?: boolean
 }
+
 type RuleSet = Record<string, Rule.RuleModule>
+
 function getFixableRules(rules: RuleSet, prefix = "") {
   const fixable = new Set<string>()
   const reportable = new Set<string>()
@@ -41,6 +46,7 @@ function getFixableRules(rules: RuleSet, prefix = "") {
 
   return { fixable, reportable }
 }
+
 function convertMapToRecord<T>(map: Map<string, T>): Record<string, T> {
   const record: Record<string, T> = {}
   for (const [key, value] of map.entries()) {
@@ -54,8 +60,18 @@ async function getFixableRulesOfPlugin(pluginName: string) {
   const rules = plugin.rules as RuleSet
   return getFixableRules(rules, `${pluginName}/`)
 }
+
+// Only listing the most relevant acutally used members of the official module
+type ESLintModule = {
+  ESLint: typeof ESLint
+  Linter: typeof Linter
+}
+
 export async function createESLint() {
-  const preInstance = new ESLint({
+  const eslintModule = importFrom(process.cwd(), "eslint") as ESLintModule
+
+  console.log(`- Creating ESLint v${eslintModule.Linter.version} instance for analyzing...`)
+  const preInstance = new eslintModule.ESLint({
     fix: true
   })
 
@@ -65,7 +81,7 @@ export async function createESLint() {
     join(process.cwd(), "index.ts")
   )) as Linter.Config
 
-  const linter = new Linter()
+  const linter = new eslintModule.Linter()
   const builtIns = getFixableRules(convertMapToRecord(linter.getRules()))
 
   console.log(`- Loading rules from ${config.plugins?.length ?? 0} plugins...`)
@@ -84,14 +100,14 @@ export async function createESLint() {
   console.log(`- Found ${fixable.length} fixable rules.`)
   console.log(`- Found ${reportable.length} reportable rules.`)
 
-  console.log("- Creating ESLint instance for formatting...")
+  console.log(`- Creating ESLint v${eslintModule.Linter.version} instance for formatting...`)
 
   const reportableRulesOff: Record<string, "off"> = {}
   for (const rule of reportable) {
     reportableRulesOff[rule] = "off"
   }
 
-  const fixInstance = new ESLint({
+  const fixInstance = new eslintModule.ESLint({
     fix: true,
     overrideConfig: {
       rules: reportableRulesOff
