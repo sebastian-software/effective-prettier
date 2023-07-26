@@ -93,10 +93,11 @@ export async function createESLint() {
 
   const fixable = [...builtIns.fixable]
   const reportable = [...builtIns.reportable]
+  const fixTypeChecked = false
 
   if (config.plugins) {
     for (const pluginName of config.plugins) {
-      const classified = await getFixableRulesOfPlugin(pluginName)
+      const classified = getFixableRulesOfPlugin(pluginName, fixTypeChecked)
       fixable.push(...classified.fixable)
       reportable.push(...classified.reportable)
     }
