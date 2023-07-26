@@ -6,6 +6,7 @@ import chalk from "chalk"
 import { measureExecutionTime } from "./measureExecutionTime.js"
 import { createESLint } from "./createESLint.js"
 import { ESLint } from "eslint"
+import { prettierParser, eslintSupported } from "./config.js"
 
 let sharedESLint: ESLint | undefined
 
@@ -92,36 +93,6 @@ export async function runInParallel<T>(
 
   return Promise.all(results)
 }
-
-const prettierParser: Record<string, string> = {
-  ".json": "json",
-  ".css": "css",
-  ".tsx": "typescript",
-  ".ts": "typescript",
-  ".cts": "typescript",
-  ".mts": "typescript",
-  ".jsx": "babel",
-  ".js": "babel",
-  ".cjs": "babel",
-  ".mjs": "babel",
-  ".md": "markdown",
-  ".mdx": "mdx",
-  ".html": "html",
-  ".htm": "html",
-  ".yaml": "yaml",
-  ".yml": "yaml"
-}
-
-const eslintSupported = new Set([
-  ".ts",
-  ".tsx",
-  ".js",
-  ".jsx",
-  ".mjs",
-  ".mts",
-  ".cjs",
-  ".cts"
-])
 
 const symbols: Record<string, string> = {
   skipped: chalk.dim(figures.bullet),

@@ -6,8 +6,7 @@ import {
 } from "./process.js"
 import { normalize, relative, sep } from "node:path"
 import { measureExecutionTime } from "./measureExecutionTime.js"
-
-const PARALLEL_TASKS = 4
+import { PARALLEL_TASKS } from "./config.js"
 
 export function getCommonPath(paths: string[]): string {
   if (paths.length === 0) {
