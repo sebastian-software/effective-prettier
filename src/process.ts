@@ -111,6 +111,14 @@ const symbols: Record<string, string> = {
   error: chalk.red(figures.cross)
 }
 
+export function getSymbol(isModified: boolean | null) {
+  return isModified == null
+    ? symbols.error
+    : isModified
+    ? symbols.modified
+    : symbols.skipped
+}
+
 export async function processFile(filePath: string) {
   const fileExt = extname(filePath)
   const parser = prettierParser[fileExt]
@@ -129,7 +137,7 @@ export async function processFile(filePath: string) {
   if (eslintSupported.has(fileExt)) {
     const result = await formatWithESLint(modified, filePath)
     durations.push(result.runtime)
-    feedback.push(result.isModified ? symbols.modified : symbols.skipped)
+    feedback.push(getSymbol(result.isModified))
     if (result.isModified) {
       modified = result.output
     }
@@ -137,7 +145,7 @@ export async function processFile(filePath: string) {
 
   const result = await formatWithPrettier(modified, filePath)
   durations.push(result.runtime)
-  feedback.push(result.isModified ? symbols.modified : symbols.skipped)
+  feedback.push(getSymbol(result.isModified))
   if (result.isModified) {
     modified = result.output
   }
@@ -146,7 +154,7 @@ export async function processFile(filePath: string) {
   if (eslintSupported.has(fileExt) && result.isModified) {
     const result = await formatWithESLint(modified, filePath)
     durations.push(result.runtime)
-    feedback.push(result.isModified ? symbols.modified : symbols.skipped)
+    feedback.push(getSymbol(result.isModified))
     if (result.isModified) {
       modified = result.output
     }
