@@ -84,13 +84,13 @@ async function getFixableRulesOfPlugin(pluginName: string) {
 }
 
 async function createESLint() {
-  const inst = new ESLint({
+  const instance = new ESLint({
     fix: true
   })
 
   // Preload the ESLint config from the current folder
   // assuming that we focus on scanning files inside CWD.
-  const config = (await inst.calculateConfigForFile(
+  const config = (await instance.calculateConfigForFile(
     join(process.cwd(), "index.ts")
   )) as Linter.Config
 
@@ -104,24 +104,16 @@ async function createESLint() {
     }
   }
 
-  console.log("ALL FIXABLE:", JSON.stringify(fixable))
-
-  // const filePath = join(process.cwd(), "src/index.ts")
-
-  // const result = await inst.lintText("const x", { filePath })
-  // const meta = inst.getRulesMetaForResults(result)
-  // => meta is always = {} - DAMN!
-
-  // console.log("FILE-PATH:", filePath)
-  // console.log("META:", meta)
-
-  return inst
+  return {
+    instance,
+    fixable
+  }
 }
 
 const sharedESLint = await createESLint()
 
 async function formatWithESLintImpl(text: string, filePath: string) {
-  const result = await sharedESLint.lintText(text, {
+  const result = await sharedESLint.instance.lintText(text, {
     filePath
   })
 
