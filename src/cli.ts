@@ -10,6 +10,10 @@ import { measureExecutionTime } from "./measureExecutionTime.js"
 const PARALLEL_TASKS = 4
 
 export function getCommonPath(paths: string[]): string {
+  if (paths.length === 0) {
+    return ""
+  }
+
   const splitPaths = paths.map((singlePath) => singlePath.split(sep))
   let commonPath = ""
 
@@ -48,7 +52,7 @@ if (args.length < 1) {
 }
 
 try {
-  void main(args)
+  await main(args)
 } catch (error) {
   if (error instanceof Error) {
     console.error(error.message)
@@ -60,7 +64,11 @@ try {
 async function processPattern(pattern: string) {
   console.log(`- Searching for files using: ${pattern}...`)
   const files = await glob(pattern)
+  if (files.length === 0) {
+    throw new Error(`- No files found for pattern: ${pattern}`)
+  }
 
+  console.log(`- Found ${files.length} files.`)
   const commonPath = getCommonPath(files)
   process.chdir(commonPath)
   console.log(`- Detected root folder: ${commonPath}`)
