@@ -62,7 +62,7 @@ try {
 
 async function processPattern(pattern: string) {
   console.log(`- Searching for files using: ${pattern}...`)
-  const files = await glob(pattern)
+  const files = await glob(pattern, { ignore: ["node_modules"] })
   if (files.length === 0) {
     throw new Error(`- No files found for pattern: ${pattern}`)
   }

@@ -114,7 +114,7 @@ export async function runInParallel<T>(
 
 const symbols: Record<string, string> = {
   skipped: chalk.dim(figures.bullet),
-  modified: chalk.green(figures.tick),
+  modified: chalk.bold(chalk.green(figures.tick)),
   error: chalk.red(figures.cross)
 }
 
