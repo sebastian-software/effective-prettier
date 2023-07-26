@@ -1,119 +1,20 @@
-import { ESLint, Linter, Rule } from "eslint"
 import { format, resolveConfig } from "prettier"
 import { readFile, writeFile } from "node:fs/promises"
-import { extname, join } from "node:path"
+import { extname } from "node:path"
 import figures from "figures"
 import chalk from "chalk"
-import { Legacy } from "@eslint/eslintrc"
+import { measureExecutionTime } from "./measureExecutionTime.js"
+import { createESLint } from "./createESLint.js"
+import { ESLint } from "eslint"
 
-type CallableFunction<T> = () => Promise<T>
-
-interface TimedResult<T> {
-  result: T
-  runtime: number
-}
-
-async function measureExecutionTime<T>(
-  fn: CallableFunction<T>
-): Promise<TimedResult<T>> {
-  const startTime = performance.now()
-  const result = await fn()
-  const endTime = performance.now()
-
-  const runtime = endTime - startTime
-
-  return {
-    result,
-    runtime
-  }
-}
-
-type PluginModule = {
-  default: ESLint.Plugin
-}
-
-function getFullyQualifiedPluginName(pluginName: string) {
-  // Rely on the quite internal naming helper in ESLint.
-  // This is not rock solid for the distance future but feels better
-  // than trying to replicate the same logic here.
-  return Legacy.naming.normalizePackageName(pluginName, "eslint-plugin")
-}
-
-async function loadPlugin(pluginName: string): Promise<ESLint.Plugin> {
-  const longName = getFullyQualifiedPluginName(pluginName)
-  const module = (await import(longName)) as PluginModule
-  return module.default
-}
-
-// ESLint TypeScript uses a non-standard flag requiresTypeChecking on their docs section
-type ExtendedDocs = Rule.RuleMetaData["docs"] & {
-  requiresTypeChecking?: boolean
-}
-
-type RuleSet = Record<string, Rule.RuleModule>
-
-function getFixableRules(rules: RuleSet, prefix = "") {
-  const fixable = new Set()
-
-  for (const [name, rule] of Object.entries(rules)) {
-    const meta = rule.meta
-    const docs = meta?.docs as ExtendedDocs
-    const requiresTypes = docs?.requiresTypeChecking as boolean
-    const isFixable = meta?.fixable
-
-    if (isFixable && !requiresTypes) {
-      fixable.add(`${prefix}${name}`)
-    }
-  }
-
-  return fixable
-}
-
-function convertMapToRecord<T>(map: Map<string, T>): Record<string, T> {
-  const record: Record<string, T> = {}
-  for (const [key, value] of map.entries()) {
-    record[key] = value
-  }
-  return record
-}
-
-async function getFixableRulesOfPlugin(pluginName: string) {
-  const plugin = await loadPlugin(pluginName)
-  const rules = plugin.rules as RuleSet
-  return getFixableRules(rules, `${pluginName}/`)
-}
-
-async function createESLint() {
-  const instance = new ESLint({
-    fix: true
-  })
-
-  // Preload the ESLint config from the current folder
-  // assuming that we focus on scanning files inside CWD.
-  const config = (await instance.calculateConfigForFile(
-    join(process.cwd(), "index.ts")
-  )) as Linter.Config
-
-  const linter = new Linter()
-  const fixableBuiltIns = getFixableRules(convertMapToRecord(linter.getRules()))
-
-  const fixable = [...fixableBuiltIns]
-  if (config.plugins) {
-    for (const pluginName of config.plugins) {
-      fixable.push(...(await getFixableRulesOfPlugin(pluginName)))
-    }
-  }
-
-  return {
-    instance,
-    fixable
-  }
-}
-
-const sharedESLint = await createESLint()
+let sharedESLint: ESLint | undefined
 
 async function formatWithESLintImpl(text: string, filePath: string) {
-  const result = await sharedESLint.instance.lintText(text, {
+  if (!sharedESLint) {
+    sharedESLint = await createESLint()
+  }
+
+  const result = await sharedESLint.lintText(text, {
     filePath
   })
 
@@ -200,7 +101,6 @@ const prettierParser: Record<string, string> = {
 }
 
 const eslintSupported = new Set([
-  ".json",
   ".ts",
   ".tsx",
   ".js",
