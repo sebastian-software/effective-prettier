@@ -5,15 +5,10 @@ import figures from "figures"
 import chalk from "chalk"
 import { measureExecutionTime } from "./measureExecutionTime.js"
 import { createESLint } from "./createESLint.js"
-import { ESLint } from "eslint"
 
-let sharedESLint: ESLint | undefined
+const sharedESLint = await createESLint()
 
 async function formatWithESLintImpl(text: string, filePath: string) {
-  if (!sharedESLint) {
-    sharedESLint = await createESLint()
-  }
-
   const result = await sharedESLint.lintText(text, {
     filePath
   })
