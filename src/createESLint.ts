@@ -3,10 +3,6 @@ import { join } from "node:path"
 import { Legacy } from "@eslint/eslintrc"
 import importFrom from "import-from"
 
-type PluginModule = {
-  default: ESLint.Plugin
-}
-
 function getFullyQualifiedPluginName(pluginName: string) {
   // Rely on the quite internal naming helper in ESLint.
   // This is not rock solid for the distance future but feels better
@@ -14,10 +10,9 @@ function getFullyQualifiedPluginName(pluginName: string) {
   return Legacy.naming.normalizePackageName(pluginName, "eslint-plugin")
 }
 
-async function loadPlugin(pluginName: string): Promise<ESLint.Plugin> {
+function loadPlugin(pluginName: string): ESLint.Plugin {
   const longName = getFullyQualifiedPluginName(pluginName)
-  const module = (await import(longName)) as PluginModule
-  return module.default
+  return importFrom(process.cwd(), longName) as ESLint.Plugin
 }
 
 // ESLint TypeScript uses a non-standard flag requiresTypeChecking on their docs section
