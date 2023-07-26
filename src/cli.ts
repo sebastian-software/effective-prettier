@@ -1,5 +1,9 @@
 import glob from "fast-glob"
-import { initSharedESLintInstance, processFile, runInParallel } from "./process.js"
+import {
+  initSharedESLintInstance,
+  processFile,
+  runInParallel
+} from "./process.js"
 import { normalize, relative, sep } from "node:path"
 
 const PARALLEL_TASKS = 4
@@ -25,26 +29,35 @@ export function getCommonPath(paths: string[]): string {
 }
 
 async function main(patterns: string[] = []) {
-  const files = await glob(patterns)
-  const commonPath = getCommonPath(files)
-  console.log(`- Root Path: ${commonPath}`)
-  process.chdir(commonPath)
+  const prevCwd = process.cwd()
 
-  console.log("Initializing ESLint instance...")
-  await initSharedESLintInstance()
+  for (const pattern of patterns) {
+    console.log(`- Searching for files matching ${pattern}...`)
+    const files = await glob(patterns)
 
-  console.log(`- Processing ${files.length} files...`)
-  const adjustedFiles = files.map((fileName) => relative(commonPath, fileName))
-  const tasks = adjustedFiles.map((fileName) => () => processFile(fileName))
-  await runInParallel(tasks, PARALLEL_TASKS)
+    const commonPath = getCommonPath(files)
+    process.chdir(commonPath)
+    console.log(`- Root Path: ${commonPath}`)
 
-  console.log("- Done")
+    console.log("- Initializing ESLint...")
+    await initSharedESLintInstance()
+
+    console.log(`- Processing ${files.length} files...`)
+    const adjustedFiles = files.map((fileName) =>
+      relative(commonPath, fileName)
+    )
+    const tasks = adjustedFiles.map((fileName) => () => processFile(fileName))
+    await runInParallel(tasks, PARALLEL_TASKS)
+
+    console.log("- Done")
+    process.chdir(prevCwd)
+  }
 }
 
 const args = process.argv.slice(2)
 
-if (args.length !== 1) {
-  console.error("Usage: effective-prettier <pattern>")
+if (args.length < 1) {
+  console.error("Usage: effective-prettier <pattern[s]>")
   process.exit(1)
 }
 

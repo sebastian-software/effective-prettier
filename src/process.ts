@@ -12,7 +12,7 @@ let sharedESLint: ESLint | undefined
 export async function initSharedESLintInstance() {
   try {
     sharedESLint = await createESLint()
-  } catch(error) {
+  } catch (error) {
     if (error instanceof Error) {
       console.error(error.message)
     }
