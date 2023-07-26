@@ -22,17 +22,26 @@ type ExtendedDocs = Rule.RuleMetaData["docs"] & {
 
 type RuleSet = Record<string, Rule.RuleModule>
 
-function getFixableRules(rules: RuleSet, prefix = "") {
+function classifyRules(
+  rules: RuleSet,
+  pluginName = "",
+  fixTypeChecked = false
+) {
   const fixable = new Set<string>()
   const reportable = new Set<string>()
 
   for (const [name, rule] of Object.entries(rules)) {
     const meta = rule.meta
     const docs = meta?.docs as ExtendedDocs
-    const requiresTypes = docs?.requiresTypeChecking as boolean
+    const requiresTypes = docs?.requiresTypeChecking
     const isFixable = meta?.fixable
+    const prefix = pluginName ? `${pluginName}/` : ""
 
-    if (isFixable && !requiresTypes) {
+    if (isFixable && requiresTypes && !fixTypeChecked) {
+      console.log(`  - Ignoring rule ${prefix}${name} (requires type checking)`)
+    }
+
+    if (isFixable && (fixTypeChecked || !requiresTypes)) {
       fixable.add(`${prefix}${name}`)
     } else {
       reportable.add(`${prefix}${name}`)
@@ -50,10 +59,10 @@ function convertMapToRecord<T>(map: Map<string, T>): Record<string, T> {
   return record
 }
 
-async function getFixableRulesOfPlugin(pluginName: string) {
-  const plugin = await loadPlugin(pluginName)
+function getFixableRulesOfPlugin(pluginName: string, fixTypeChecked: boolean) {
+  const plugin = loadPlugin(pluginName)
   const rules = plugin.rules as RuleSet
-  return getFixableRules(rules, `${pluginName}/`)
+  return classifyRules(rules, pluginName, fixTypeChecked)
 }
 
 // Only listing the most relevant acutally used members of the official module
@@ -65,9 +74,7 @@ type ESLintModule = {
 export async function createESLint() {
   const eslintModule = importFrom(process.cwd(), "eslint") as ESLintModule
 
-  console.log(
-    `- Initializing ESLint v${eslintModule.Linter.version}...`
-  )
+  console.log(`- Initializing ESLint v${eslintModule.Linter.version}...`)
 
   const preInstance = new eslintModule.ESLint({
     fix: true
@@ -80,7 +87,7 @@ export async function createESLint() {
   )) as Linter.Config
 
   const linter = new eslintModule.Linter()
-  const builtIns = getFixableRules(convertMapToRecord(linter.getRules()))
+  const builtIns = classifyRules(convertMapToRecord(linter.getRules()))
 
   console.log(`- Loading rules from ${config.plugins?.length ?? 0} plugins...`)
 

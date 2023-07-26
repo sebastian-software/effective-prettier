@@ -1,4 +1,3 @@
-import { format, resolveConfig } from "prettier"
 import { readFile, writeFile } from "node:fs/promises"
 import { extname } from "node:path"
 import figures from "figures"
@@ -7,6 +6,7 @@ import { measureExecutionTime } from "./measureExecutionTime.js"
 import { createESLint } from "./createESLint.js"
 import type { ESLint } from "eslint"
 import { prettierParser, eslintSupported } from "./config.js"
+import importFrom from "import-from"
 
 let sharedESLint: ESLint | undefined
 
@@ -48,17 +48,28 @@ async function formatWithESLint(text: string, filePath: string) {
   }
 }
 
-async function formatWithPrettier(text: string, filePath: string) {
-  const fileExt = extname(filePath)
-  const parser = prettierParser[fileExt]
+type PrettierModule = typeof import("prettier")
 
-  const prettierOptions = await resolveConfig(filePath)
+async function formatWithPrettier(text: string, filePath: string) {
+  const prettierModule = importFrom(process.cwd(), "prettier") as PrettierModule
+  const prettierInfo = await prettierModule.getFileInfo(filePath)
+
+  // Respect .prettierignore
+  if (prettierInfo.ignored) {
+    return {
+      output: text,
+      runtime: 0,
+      isModified: false
+    }
+  }
+
+  const prettierOptions = await prettierModule.resolveConfig(filePath)
 
   const returnValue = await measureExecutionTime(
     async () =>
-      await format(text, {
+      await prettierModule.format(text, {
         ...prettierOptions,
-        parser
+        filepath: filePath
       })
   )
 
