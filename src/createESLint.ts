@@ -70,7 +70,10 @@ type ESLintModule = {
 export async function createESLint() {
   const eslintModule = importFrom(process.cwd(), "eslint") as ESLintModule
 
-  console.log(`- Creating ESLint v${eslintModule.Linter.version} instance for analyzing...`)
+  console.log(
+    `- Initializing ESLint v${eslintModule.Linter.version}...`
+  )
+
   const preInstance = new eslintModule.ESLint({
     fix: true
   })
@@ -100,7 +103,7 @@ export async function createESLint() {
   console.log(`- Found ${fixable.length} fixable rules.`)
   console.log(`- Found ${reportable.length} reportable rules.`)
 
-  console.log(`- Creating ESLint v${eslintModule.Linter.version} instance for formatting...`)
+  console.log("- Creating ESLint instance for formatting...")
 
   const reportableRulesOff: Record<string, "off"> = {}
   for (const rule of reportable) {

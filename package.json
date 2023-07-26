@@ -13,7 +13,7 @@
     "check": "tsc --noEmit",
     "build": "rimraf dist && tsc",
     "prepare": "npm run build",
-    "format": "prettier --write src",
+    "format": "npm run build && node dist/cli.js 'src/**/*.ts'",
     "release": "release-it",
     "watch": "tsc --watch",
     "test": "echo \"Error: no test specified\" && exit 1"

@@ -15,7 +15,7 @@ export const prettierParser: Record<string, string> = {
   ".htm": "html",
   ".yaml": "yaml",
   ".yml": "yaml"
-};
+}
 
 export const eslintSupported = new Set([
   ".ts",
@@ -26,6 +26,6 @@ export const eslintSupported = new Set([
   ".mts",
   ".cjs",
   ".cts"
-]);
+])
 
 export const PARALLEL_TASKS = 4

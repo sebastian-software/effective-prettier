@@ -11,6 +11,8 @@ Effective Prettier uses you locally installed tools. It does not include any ver
 - "eslint": "8.x",
 - "prettier": "3.x"
 
+Note: Effective Prettier will never use its own `eslint` or `prettier`. The import is modified so that it loads these dependencies (as well as the plugins) relative to the current working directory.
+
 ## Tech Stack
 
 - `eslint` for linting JavaScript and TypeScript files

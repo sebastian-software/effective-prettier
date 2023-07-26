@@ -72,7 +72,6 @@ async function processPattern(pattern: string) {
   process.chdir(commonPath)
   console.log(`- Detected root folder: ${commonPath}`)
 
-  console.log("- Initializing ESLint...")
   await initSharedESLintInstance()
 
   console.log(`- Processing ${files.length} files...`)
