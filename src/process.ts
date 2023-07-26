@@ -5,10 +5,27 @@ import figures from "figures"
 import chalk from "chalk"
 import { measureExecutionTime } from "./measureExecutionTime.js"
 import { createESLint } from "./createESLint.js"
+import { ESLint } from "eslint"
 
-const sharedESLint = await createESLint()
+let sharedESLint: ESLint | undefined
+
+export async function initSharedESLintInstance() {
+  try {
+    sharedESLint = await createESLint()
+  } catch(error) {
+    if (error instanceof Error) {
+      console.error(error.message)
+    }
+
+    process.exit(1)
+  }
+}
 
 async function formatWithESLintImpl(text: string, filePath: string) {
+  if (!sharedESLint) {
+    throw new Error("ESLint instance not initialized")
+  }
+
   const result = await sharedESLint.lintText(text, {
     filePath
   })

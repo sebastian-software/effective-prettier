@@ -1,5 +1,5 @@
 import glob from "fast-glob"
-import { processFile, runInParallel } from "./process.js"
+import { initSharedESLintInstance, processFile, runInParallel } from "./process.js"
 import { normalize, relative, sep } from "node:path"
 
 const PARALLEL_TASKS = 4
@@ -30,11 +30,14 @@ async function main(patterns: string[] = []) {
   console.log(`- Root Path: ${commonPath}`)
   process.chdir(commonPath)
 
-  const adjustedFiles = files.map((fileName) => relative(commonPath, fileName))
+  console.log("Initializing ESLint instance...")
+  await initSharedESLintInstance()
 
   console.log(`- Processing ${files.length} files...`)
+  const adjustedFiles = files.map((fileName) => relative(commonPath, fileName))
   const tasks = adjustedFiles.map((fileName) => () => processFile(fileName))
   await runInParallel(tasks, PARALLEL_TASKS)
+
   console.log("- Done")
 }
 
