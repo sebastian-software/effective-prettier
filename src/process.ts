@@ -59,7 +59,7 @@ async function formatWithPrettier(text: string, filePath: string) {
     return {
       output: text,
       runtime: 0,
-      isModified: false
+      isModified: null
     }
   }
 
