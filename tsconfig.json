@@ -33,7 +33,6 @@
     "pretty": true,
     "newLine": "lf",
     "stripInternal": true,
-    "noEmitOnError": true,
     "useDefineForClassFields": true
   }
 }
