@@ -50,9 +50,16 @@ async function formatWithESLint(text: string, filePath: string) {
 
 type PrettierModule = typeof import("prettier")
 
+const PRETTIER_DEFAULT_OPTIONS = {
+  ignorePath: [".prettierignore", ".gitignore"]
+}
+
 async function formatWithPrettier(text: string, filePath: string) {
   const prettierModule = importFrom(process.cwd(), "prettier") as PrettierModule
-  const prettierInfo = await prettierModule.getFileInfo(filePath)
+  const prettierInfo = await prettierModule.getFileInfo(
+    filePath,
+    PRETTIER_DEFAULT_OPTIONS
+  )
 
   // Respect .prettierignore
   if (prettierInfo.ignored) {
