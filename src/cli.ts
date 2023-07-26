@@ -5,6 +5,7 @@ import {
   runInParallel
 } from "./process.js"
 import { normalize, relative, sep } from "node:path"
+import { measureExecutionTime } from "./measureExecutionTime.js"
 
 const PARALLEL_TASKS = 4
 
@@ -32,24 +33,9 @@ async function main(patterns: string[] = []) {
   const prevCwd = process.cwd()
 
   for (const pattern of patterns) {
-    console.log(`- Searching for files matching ${pattern}...`)
-    const files = await glob(patterns)
-
-    const commonPath = getCommonPath(files)
-    process.chdir(commonPath)
-    console.log(`- Root Path: ${commonPath}`)
-
-    console.log("- Initializing ESLint...")
-    await initSharedESLintInstance()
-
-    console.log(`- Processing ${files.length} files...`)
-    const adjustedFiles = files.map((fileName) =>
-      relative(commonPath, fileName)
-    )
-    const tasks = adjustedFiles.map((fileName) => () => processFile(fileName))
-    await runInParallel(tasks, PARALLEL_TASKS)
-
-    console.log("- Done")
+    console.log()
+    const result = await measureExecutionTime(() => processPattern(pattern))
+    console.log(`- Done: ${Math.round(result.runtime)}ms`)
     process.chdir(prevCwd)
   }
 }
@@ -69,4 +55,21 @@ try {
   }
 
   process.exitCode = 1
+}
+
+async function processPattern(pattern: string) {
+  console.log(`- Searching for files using: ${pattern}...`)
+  const files = await glob(pattern)
+
+  const commonPath = getCommonPath(files)
+  process.chdir(commonPath)
+  console.log(`- Detected root folder: ${commonPath}`)
+
+  console.log("- Initializing ESLint...")
+  await initSharedESLintInstance()
+
+  console.log(`- Processing ${files.length} files...`)
+  const adjustedFiles = files.map((fileName) => relative(commonPath, fileName))
+  const tasks = adjustedFiles.map((fileName) => () => processFile(fileName))
+  await runInParallel(tasks, PARALLEL_TASKS)
 }

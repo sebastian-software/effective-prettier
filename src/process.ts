@@ -181,5 +181,5 @@ export async function processFile(filePath: string) {
     .map((duration) => `${Math.round(duration)}ms`)
     .join(", ")
 
-  console.log(`${formattedFeedback} ${filePath} (${formattedDurations})`)
+  console.log(`  ${formattedFeedback} ${filePath} (${formattedDurations})`)
 }
