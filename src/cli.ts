@@ -16,7 +16,7 @@ export function getCommonPath(paths: string[]): string {
   const splitPaths = paths.map((singlePath) => singlePath.split(sep))
   let commonPath = ""
 
-  for (let i = 0; i < splitPaths[0].length; i++) {
+  for (let i = 0; i < splitPaths[0].length -1; i++) {
     const thisFolder = splitPaths[0][i]
     const isCommon = splitPaths.every(
       (singlePath) => singlePath[i] === thisFolder
