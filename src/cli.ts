@@ -1,36 +1,13 @@
 import glob from "fast-glob"
+import { relative } from "node:path"
+import { PARALLEL_TASKS } from "./config.js"
+import { getCommonPath } from "./getCommonPath.js"
+import { measureExecutionTime } from "./measureExecutionTime.js"
 import {
   initSharedESLintInstance,
   processFile,
   runInParallel
 } from "./process.js"
-import { normalize, relative, sep } from "node:path"
-import { measureExecutionTime } from "./measureExecutionTime.js"
-import { PARALLEL_TASKS } from "./config.js"
-
-export function getCommonPath(paths: string[]): string {
-  if (paths.length === 0) {
-    return ""
-  }
-
-  const splitPaths = paths.map((singlePath) => singlePath.split(sep))
-  let commonPath = ""
-
-  for (let i = 0; i < splitPaths[0].length; i++) {
-    const thisFolder = splitPaths[0][i]
-    const isCommon = splitPaths.every(
-      (singlePath) => singlePath[i] === thisFolder
-    )
-
-    if (!isCommon) {
-      break
-    } else {
-      commonPath += thisFolder + sep
-    }
-  }
-
-  return normalize(commonPath)
-}
 
 async function main(patterns: string[] = []) {
   const prevCwd = process.cwd()

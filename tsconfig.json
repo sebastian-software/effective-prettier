@@ -27,6 +27,7 @@
     // Sindre Sorhus
     // https://github.com/sindresorhus/tsconfig
     "target": "ES2020", // Node.js 14
+    "types": ["vitest/globals"],
     "lib": ["dom", "dom.iterable", "ES2020"],
     "resolveJsonModule": false, // ESM doesn't yet support JSON modules.
     "declaration": true,
